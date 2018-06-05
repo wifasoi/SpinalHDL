@@ -1,4 +1,5 @@
 package spinal.lib.wishbone.sim
+import spinal.lib.uvm.sim._
 
 import spinal.sim._
 import spinal.core._
@@ -27,78 +28,54 @@ class WishboneStatus(bus: Wishbone){
   def isRead    : Boolean =                             isTransfer && !bus.WE.toBoolean
 }
 
-class WishboneDriver(bus: Wishbone, clockdomain: ClockDomain){
+class WishboneDriver(val bus: Wishbone, val clockdomain: ClockDomain) extends Driver[WishboneCycle,Wishbone]{
   val busStatus = WishboneStatus(bus)
 
-  def send(transaction : WishboneTransaction, we: Boolean): Unit@suspendable = {
-    bus.WE  #= we
+  def send(transaction : WishboneTransaction): Unit@suspendable = {
     transaction.driveAsMaster(bus)
     if(!bus.config.isPipelined) clockdomain.waitSamplingWhere(busStatus.isAck)
     else clockdomain.waitSamplingWhere(!busStatus.isStall)
   }
 
-  def sendSingle(transaction: WishboneTransaction, we: Boolean): Unit@suspendable = {
+  def sendBlock(cycle: WishboneCycle): Unit@suspendable = {
     bus.CYC #= true
-    bus.STB #= true
-    send(transaction, we)
-    bus.STB #= false
-    val dummy = if(bus.config.isPipelined) clockdomain.waitSamplingWhere(busStatus.isAck)
-    bus.CYC #= false
-  }
-
-  def sendBlock(transactions: Seq[WishboneTransaction], we: Boolean): Unit@suspendable = {
-    bus.CYC #= true
-    transactions.dropRight(1).suspendable.foreach{ tran =>
+    cycle.transactions.dropRight(1).suspendable.foreach{ tran =>
       bus.STB #= true
-      send(tran, we)
+      send(tran)
       if(!bus.config.isPipelined){
         bus.STB #= false
         clockdomain.waitSampling()
       }
     }
     bus.STB #= true
-    send(transactions.last, we)
+    send(cycle.transactions.last)
     bus.STB #= false
-    //ackCounter.join()
     bus.CYC #= false
   }
 
 
-  def sendPipelinedBlock(transactions: Seq[WishboneTransaction], we: Boolean): Unit@suspendable = {
+  def sendPipelinedBlock(cycle: WishboneCycle): Unit@suspendable = {
     bus.CYC #= true
     bus.STB #= true
     val ackCounter = fork{
       var counter = 0
-      while(counter < transactions.size){
+      while(counter < cycle.transactions.size){
         clockdomain.waitSamplingWhere(busStatus.isAck)
         counter = counter + 1
       }
     }
-    transactions.suspendable.foreach(send(_, true))
+    cycle.transactions.toList.suspendable.foreach(send(_))
     bus.STB #= false
     ackCounter.join()
     bus.CYC #= false
   }
 
-  def drive(transactions: Seq[WishboneTransaction], we: Boolean): Unit@suspendable = {
-    if(bus.config.isPipelined)  sendPipelinedBlock(transactions,we)
-    else                        sendBlock(transactions,we)
+  def drive(cycle: WishboneCycle): Unit@suspendable = {
+    if(bus.config.isPipelined)  sendPipelinedBlock(cycle)
+    else                        sendBlock(cycle)
+    clockdomain.waitSampling()
   }
-//TODO
-  // def read(transaction: [Seq[WishboneTransaction],WishboneTransaction]): Unit@suspendable = {
-  //   transaction match{
-  //     case Seq[WishboneTransaction] => sendBlock(transaction, false)
-  //     case WishboneTransaction      => sendSingle(transaction, false)
-  //   }
-  // }
-
-  // def write[T <: Seq[WishboneTransaction],WishboneTransaction](transaction: T): Unit@suspendable = {
-  //   transaction match{
-  //     case Seq[WishboneTransaction] => sendBlock(transaction, true)
-  //     case WishboneTransaction      => sendSingle(transaction, true)
-  //   }
-  // }
-
+//////////////////////////////////////////////////////////////////////////
   def slaveAckResponse(): Unit@suspendable = {
     clockdomain.waitSamplingWhere(busStatus.isTransfer)
     bus.ACK #= true
@@ -132,5 +109,4 @@ class WishboneDriver(bus: Wishbone, clockdomain: ClockDomain){
       }
     }
   }
-
 }

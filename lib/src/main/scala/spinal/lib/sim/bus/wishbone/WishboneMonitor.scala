@@ -1,4 +1,5 @@
 package spinal.lib.wishbone.sim
+import spinal.lib.uvm.sim._
 
 import spinal.sim._
 import spinal.core._
@@ -11,19 +12,27 @@ import scala.util.Random
 
 
 object WishboneMonitor{
-  def apply(bus : Wishbone, clockdomain: ClockDomain)(callback: (Wishbone) => Unit) = new WishboneMonitor(bus,clockdomain).addCallback(callback)
+  def apply(bus : Wishbone, clockdomain: ClockDomain)(callback: (WishboneCycle) => Unit) = new WishboneMonitor(bus,clockdomain).addCallback(callback)
 }
 
-class WishboneMonitor(bus: Wishbone, clockdomain: ClockDomain){
+class WishboneMonitor(val bus: Wishbone, val clockdomain: ClockDomain, sampleAsMaster: Boolean = true) extends Monitor[WishboneCycle,Wishbone]{
   val busStatus = WishboneStatus(bus)
-  val callbacks = ArrayBuffer[(Wishbone) => Unit]()
 
-  def addCallback(callback: (Wishbone) => Unit): Unit = callbacks += callback
+  def trigger = busStatus.isAck
+  def sample() =  if(sampleAsMaster) WishboneTransaction.sampleAsMaster(bus)
+                  else               WishboneTransaction.sampleAsSlave(bus)
 
-  fork{
+  def doSampling() = fork{
     while(true){
-      clockdomain.waitSamplingWhere(busStatus.isAck)
-      callbacks.suspendable.foreach{_(bus)}
+      clockdomain.waitSamplingWhere(busStatus.isCycle)
+      val cycleBuffer = ListBuffer[WishboneTransaction]()
+      while(busStatus.isCycle){
+        clockdomain.waitSampling()
+        if(busStatus.isAck)
+          cycleBuffer += sample()
+      }
+      val cycle = WishboneCycle(cycleBuffer.toList)
+      onTriggerCallbacks.suspendable.foreach( _(cycle) )
     }
   }
 }

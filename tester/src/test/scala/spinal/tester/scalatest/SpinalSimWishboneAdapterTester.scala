@@ -40,36 +40,61 @@ class SpinalSimWishboneAdapterTester extends FunSuite{
       dut.io.busOUT.DAT_MOSI #= 0
       dut.clockDomain.waitSampling(10)
       SimTimeout(1000*20*100)
-      val sco = ScoreboardInOrder[WishboneTransaction]()
-      val dri = new WishboneDriver(dut.io.busIN, dut.clockDomain)
-      val dri2 = new WishboneDriver(dut.io.busOUT, dut.clockDomain)
+      val sco = ScoreboardInOrder[WishboneCycle]()
+    //   val dri = new WishboneDriver(dut.io.busIN, dut.clockDomain)
+    //   val dri2 = new WishboneDriver(dut.io.busOUT, dut.clockDomain)
 
-      val seq = WishboneSequencer{
-        WishboneTransaction(BigInt(Random.nextInt(200)),BigInt(Random.nextInt(200)))
-        }
+    //   val seq = WishboneSequencer{
+    //     WishboneTransaction(BigInt(Random.nextInt(200)),BigInt(Random.nextInt(200)))
+    //     }
 
-      val mon1 = WishboneMonitor(dut.io.busIN, dut.clockDomain){ bus =>
-        sco.pushRef(WishboneTransaction.sampleAsMaster(bus))
+    //   val mon1 = WishboneMonitor(dut.io.busIN, dut.clockDomain){ transaction =>
+    //     sco.pushRef(transaction)
+    //   }
+
+    //   val mon2 = WishboneMonitor(dut.io.busOUT, dut.clockDomain){ transaction =>
+    //     sco.pushDut(transaction)
+    //   }
+
+    //   dri2.slaveSink()
+
+    //   Suspendable.repeat(1000){
+    //     seq.generateTransactions(10)
+    //     val ddd = fork{
+    //       while(!seq.isEmpty){
+    //         val tran = seq.nextTransaction
+    //         dri.drive(tran)
+    //         dut.clockDomain.waitSampling(1)
+    //       }
+    //     }
+    //     ddd.join()
+    //     dut.clockDomain.waitSampling(10)
+    //   }
+    // }
+    //val rand1 = () => WishboneTransaction(BigInt(Random.nextInt(200)),BigInt(Random.nextInt(200)))
+
+     val age1 = WishboneAgent(dut.io.busIN,dut.clockDomain){ transaction =>
+        sco.pushRef(transaction)
+     }
+      age1.addBuilder{
+        //WishboneCycle(List(WishboneTransaction().randomizeAddress(200).randomizeData(200)))
+        val provola = WishboneCycle(List(WishboneTransaction().randomizeAddress(200).randomizeData(200)))
+        println(provola)
+        provola
       }
-
-      val mon2 = WishboneMonitor(dut.io.busOUT, dut.clockDomain){ bus =>
-        sco.pushDut(WishboneTransaction.sampleAsMaster(bus))
+      val age2 = WishboneAgent(dut.io.busOUT,dut.clockDomain){ transaction =>
+        sco.pushDut(transaction)
       }
-
-      dri2.slaveSink()
-
-      Suspendable.repeat(1000){
-        seq.generateTransactions(10)
-        val ddd = fork{
-          while(!seq.isEmpty){
-            val tran = seq.nextTransaction
-            dri.drive(tran ,true)
-            dut.clockDomain.waitSampling(1)
-          }
-        }
-        ddd.join()
-        dut.clockDomain.waitSampling(10)
+      age2.addBuilder{
+        val provola = WishboneCycle(List(WishboneTransaction().randomizeAddress(200).randomizeData(200)))
+        println(provola)
+        provola
       }
+      age2.driver.slaveSink()
+      age1.create(10)
+      age1.sequencer.start()
+
+      dut.clockDomain.waitSampling(10)
     }
   }
 
