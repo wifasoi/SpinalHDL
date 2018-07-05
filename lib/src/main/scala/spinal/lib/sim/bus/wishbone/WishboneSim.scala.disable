@@ -1,0 +1,202 @@
+package spinal.lib.wishbone.sim
+
+import spinal.lib._
+import spinal.lib.fsm._
+import spinal.lib.bus.wishbone._
+import spinal.core._
+import spinal.core.sim._
+import spinal.sim._
+import scala.collection.mutable._
+import scala.util.Random
+
+case class AddressRange(base : BigInt, size: Int){
+  def inRange(address: BigInt): Boolean = (address >= base) && (address <= base + size)
+  //def == (range: AddressRange): Boolean = (base == range.base) && (size == range.size)
+  def mask(address: BigInt): BigInt = address - base
+}
+
+case class WishboneSlave(wishbone: Wishbone, clockdomain: ClockDomain){
+  val triggers = Map[AddressRange,(Wishbone) => Unit]()
+
+  def addTrigger(address: AddressRange)(trigger: (Wishbone) => Unit): Unit = {
+    triggers += (address-> trigger)
+  }
+
+  fork{
+    while(true){
+      //clockdomain.waitActiveEdgeWhere(wishbone.isStrobe.toBoolean)
+      clockdomain.waitSamplingWhere(wishbone.CYC.toBoolean && wishbone.STB.toBoolean) //TODO: support ERR
+      //wishbone.ACK #= true
+      triggers.suspendable.foreach{ trigger => if(trigger._1.inRange(wishbone.ADR.toBigInt)) trigger._2(wishbone)}
+      wishbone.ACK #= true
+      waitUntil(!(wishbone.STB.toBoolean && wishbone.CYC.toBoolean))
+      wishbone.ACK #= false
+    }
+  }
+}
+
+/*
+ In pipelined mode you need to send an acknoledge
+ */
+case class WishbonePipelinedSlave(wishbone: Wishbone, clockdomain: ClockDomain){
+  val triggers = Map[AddressRange,(Wishbone) => Unit]()
+
+  def addTrigger(address: AddressRange)(trigger: (Wishbone) => Unit): Unit = {
+    triggers += (address-> trigger)
+  }
+
+  fork{
+    while(true){
+      clockdomain.waitSamplingWhere(wishbone.CYC.toBoolean)
+      while(wishbone.STB.toBoolean){
+        triggers.suspendable.foreach{ trigger =>
+          if(trigger._1.inRange(wishbone.ADR.toBigInt)){
+            trigger._2(wishbone)
+            wishbone.ACK #= true
+          }
+        }
+        clockdomain.waitSampling()
+      }
+      wishbone.ACK #= false
+    }
+  }
+}
+
+
+
+class WishboneMaster(wishbone: Wishbone, clockdomain: ClockDomain){
+  def send(transaction : WishboneTransaction): Unit@suspendable = {
+    //clockdomain.waitActiveEdgeWhere(wishbone.isCycle.toBoolean)
+    //clockdomain.waitActiveEdge()
+    wishbone.STB #= true
+    wishbone.WE #= true
+    wishbone.ADR #= transaction.address
+    wishbone.DAT_MOSI #= transaction.data
+    if(wishbone.config.useTGA) wishbone.TGA #= transaction.tga
+    if(wishbone.config.useTGC) wishbone.TGC #= transaction.tgc
+    if(wishbone.config.useTGD) wishbone.TGD_MOSI #= transaction.tgd
+    //clockdomain.waitActiveEdgeWhere(wishbone.isAcknoledge.toBoolean)
+    clockdomain.waitSamplingWhere(wishbone.ACK.toBoolean)
+    wishbone.STB #= false
+  }
+
+  def receive(transaction : WishboneTransaction): WishboneTransaction@suspendable = {
+    //clockdomain.waitSamplingWhere(wishbone.isCycle.toBoolean)
+    //clockdomain.waitSamplingWhere(wishbone.CYC.toBoolean)
+    wishbone.STB #= true
+    wishbone.WE #= false
+    wishbone.ADR #= transaction.address
+    var tga : BigInt  = 0
+    var tgc : BigInt  = 0
+    var tgd : BigInt  = 0
+    if(wishbone.config.useTGA) tga = wishbone.TGA.toBigInt
+    if(wishbone.config.useTGC) tgc = wishbone.TGC.toBigInt
+    if(wishbone.config.useTGD) tgd = wishbone.TGD_MISO.toBigInt
+
+    //clockdomain.waitSamplingWhere(wishbone.isAcknoledge.toBoolean)
+    clockdomain.waitSamplingWhere(wishbone.ACK.toBoolean && wishbone.CYC.toBoolean)
+    wishbone.STB #= false
+    WishboneTransaction(wishbone.ADR.toBigInt, wishbone.DAT_MISO.toBigInt, tga, tgc, tgd)
+  }
+
+  def write(transaction: WishboneTransaction): Unit@suspendable = {
+      wishbone.CYC #= true
+      send(transaction)
+      wishbone.CYC #= false
+  }
+
+  def write(transactions: collection.immutable.Seq[WishboneTransaction]): Unit@suspendable = {
+      wishbone.CYC #= true
+      transactions.suspendable.foreach{ transaction => send(transaction) }
+      wishbone.CYC #= false
+  }
+
+  def read(transaction: WishboneTransaction): WishboneTransaction@suspendable = {
+      wishbone.CYC #= true
+      val ret = receive(transaction)
+      wishbone.CYC #= false
+      ret
+  }
+
+  def read(transactions: Seq[WishboneTransaction]): Seq[WishboneTransaction]@suspendable = {
+      wishbone.CYC #= true
+      val ret = Seq[WishboneTransaction]()
+      transactions.suspendable.foreach{ transaction => ret :+ receive(transaction) }
+      wishbone.CYC #= false
+      ret
+  }
+}
+
+class WishbonePipelinedMaster(wishbone: Wishbone, clockdomain: ClockDomain){
+  def send(transaction : WishboneTransaction): Unit@suspendable = {
+    wishbone.STB #= true
+    wishbone.WE #= true
+    wishbone.STALL #= false
+    wishbone.ADR #= transaction.address
+    clockdomain.waitSamplingWhere(!wishbone.STALL.toBoolean)
+    wishbone.DAT_MOSI #= transaction.data
+    if(wishbone.config.useTGA) wishbone.TGA #= transaction.tga
+    if(wishbone.config.useTGC) wishbone.TGC #= transaction.tgc
+    if(wishbone.config.useTGD) wishbone.TGD_MOSI #= transaction.tgd
+  }
+
+  def receive( transaction : WishboneTransaction): WishboneTransaction@suspendable = {
+    //clockdomain.waitSamplingWhere(wishbone.isCycle.toBoolean)
+    //clockdomain.waitSamplingWhere(wishbone.CYC.toBoolean)
+    wishbone.STB #= true
+    wishbone.WE #= false
+    wishbone.ADR #= transaction.address
+    var tga : BigInt  = 0
+    var tgc : BigInt  = 0
+    var tgd : BigInt  = 0
+    if(wishbone.config.useTGA) tga = wishbone.TGA.toBigInt
+    if(wishbone.config.useTGC) tgc = wishbone.TGC.toBigInt
+    if(wishbone.config.useTGD) tgd = wishbone.TGD_MISO.toBigInt
+
+    //clockdomain.waitSamplingWhere(wishbone.isAcknoledge.toBoolean)
+    clockdomain.waitSamplingWhere(wishbone.ACK.toBoolean && wishbone.CYC.toBoolean)
+    WishboneTransaction(wishbone.ADR.toBigInt, wishbone.DAT_MISO.toBigInt, tga, tgc, tgd)
+  }
+
+  def write(transaction: WishboneTransaction): Unit@suspendable = {
+      wishbone.CYC #= true
+      send(transaction)
+      wishbone.STB #= false
+      clockdomain.waitSamplingWhere(wishbone.ACK.toBoolean)
+      //waitUntil(wishbone.ACK.toBoolean && !wishbone.STB.toBoolean)
+      wishbone.CYC #= false
+  }
+
+  def write(transactions: collection.immutable.Seq[WishboneTransaction]): Unit@suspendable = {
+      wishbone.CYC #= true
+      var count = 0
+      val ackCounter = fork{
+        while(count < transactions.size){
+          clockdomain.waitSamplingWhere(wishbone.ACK.toBoolean && !wishbone.STALL.toBoolean)
+          count += 1
+        }
+      }
+      transactions.suspendable.foreach{ transaction => send(transaction) }
+      wishbone.STB #= false
+      ackCounter.join()
+      wishbone.CYC #= false
+  }
+
+  def read(transaction: WishboneTransaction): WishboneTransaction@suspendable = {
+      wishbone.CYC #= true
+      val ret = receive(transaction)
+      clockdomain.waitSamplingWhere(wishbone.ACK.toBoolean && !wishbone.STALL.toBoolean)
+      wishbone.CYC #= false
+      ret
+  }
+
+  def read(transactions: Seq[WishboneTransaction]): Seq[WishboneTransaction]@suspendable = {
+      wishbone.CYC #= true
+      val ret = Seq[WishboneTransaction]()
+      transactions.suspendable.foreach{ transaction => ret :+ receive(transaction) }
+      clockdomain.waitSamplingWhere(wishbone.ACK.toBoolean && !wishbone.STALL.toBoolean)
+      wishbone.CYC #= false
+      ret
+  }
+
+}

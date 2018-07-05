@@ -11,15 +11,15 @@ import scala.util.Random
 import scala.language.implicitConversions
 
 object WishboneAgent{
-  def apply(bus: Wishbone,clockdomain: ClockDomain)(callback: (WishboneCycle) => Unit) = {
-    val agent = new WishboneAgent(bus,clockdomain)
+  def apply(bus: Wishbone,clockdomain: ClockDomain,asMaster : Boolean)(callback: (WishboneTransaction) => Unit@suspendable) = {
+    val agent = new WishboneAgent(bus,clockdomain,asMaster)
     agent.addCallback(callback)
     agent.build()
     agent
   }
 }
-class WishboneAgent(bus: Wishbone,clockdomain: ClockDomain) extends Agent[WishboneCycle,Wishbone]{
+class WishboneAgent(bus: Wishbone,clockdomain: ClockDomain,asMaster : Boolean) extends Agent[WishboneTransaction,WishboneCycle,Wishbone]{
   val driver = new WishboneDriver(bus,clockdomain)
   val sequencer = new WishboneSequencer
-  val monitor = new WishboneMonitor(bus,clockdomain)
+  val monitor = new WishboneMonitor(bus,clockdomain,asMaster)
 }

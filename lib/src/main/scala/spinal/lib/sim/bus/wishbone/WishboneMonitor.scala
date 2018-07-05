@@ -12,27 +12,28 @@ import scala.util.Random
 
 
 object WishboneMonitor{
-  def apply(bus : Wishbone, clockdomain: ClockDomain)(callback: (WishboneCycle) => Unit) = new WishboneMonitor(bus,clockdomain).addCallback(callback)
+  def apply(bus : Wishbone, clockdomain: ClockDomain, asMaster: Boolean = true)(callback: (WishboneTransaction) => Unit@suspendable) = new WishboneMonitor(bus,clockdomain,asMaster).addCallback(callback)
 }
 
-class WishboneMonitor(val bus: Wishbone, val clockdomain: ClockDomain, sampleAsMaster: Boolean = true) extends Monitor[WishboneCycle,Wishbone]{
-  val busStatus = WishboneStatus(bus)
+class WishboneMonitor(val bus: Wishbone, val clockdomain: ClockDomain, asMaster: Boolean = true) extends Monitor[WishboneTransaction,Wishbone]{
+  val busStatus = WishboneStatus(bus,clockdomain)
 
-  def trigger = busStatus.isAck
-  def sample() =  if(sampleAsMaster) WishboneTransaction.sampleAsMaster(bus)
-                  else               WishboneTransaction.sampleAsSlave(bus)
+  def trigger : Boolean = if(asMaster)  busStatus.isAck
+                          else          busStatus.isTransfer
+  def sample(): WishboneTransaction = if(asMaster) WishboneTransaction.sampleAsMaster(bus)
+                                      else         WishboneTransaction.sampleAsSlave(bus)
 
   def doSampling() = fork{
     while(true){
-      clockdomain.waitSamplingWhere(busStatus.isCycle)
-      val cycleBuffer = ListBuffer[WishboneTransaction]()
-      while(busStatus.isCycle){
-        clockdomain.waitSampling()
-        if(busStatus.isAck)
-          cycleBuffer += sample()
+      //clockdomain.waitSamplingWhere(trigger)
+      //waitUntil(trigger)
+      clockdomain.waitSampling()
+      val dummy = if(trigger){
+        val transaction = sample()
+        //println("sampled!: " + asMaster + transaction)
+        onTriggerCallbacks.suspendable.foreach( _(transaction) )
       }
-      val cycle = WishboneCycle(cycleBuffer.toList)
-      onTriggerCallbacks.suspendable.foreach( _(cycle) )
+
     }
   }
 }

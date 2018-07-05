@@ -8,7 +8,7 @@ import scala.collection._
 
 trait Transaction
 
-trait Cycle[T <: Transaction]{
+trait Cycle[T <: Transaction] extends Transaction{
   val transactions : immutable.Seq[T]
 }
 
@@ -16,12 +16,6 @@ trait Driver[T <: Transaction, B <: Bundle]{
   val bus : B
   val clockdomain : ClockDomain
   def drive(transactions: T) : Unit@suspendable
-
-  // def event(bus: B): Boolean
-  // val onBusEventCallbacks : mutable.ListBuffer[(B) => Unit@suspendable] = mutable.ListBuffer[(B) => Unit@suspendable]()
-  // def addCallback(callback: (B) => Unit@suspendable) : Unit = onBusEventCallbacks += callback
-  // val mapEvent = Map[(B) => Boolean, () => Unit@suspendable]()
-  // def onEventDo
 }
 
 trait Sequencer[T <: Transaction]{
@@ -53,21 +47,21 @@ trait Monitor[T <: Transaction, B <: Bundle]{
 
   def doSampling()
 
-  val onTriggerCallbacks : mutable.ListBuffer[(T) => Unit] = mutable.ListBuffer[(T) => Unit]()
-  def addCallback(callback: (T) => Unit): Unit = onTriggerCallbacks += callback
+  val onTriggerCallbacks : mutable.ListBuffer[(T) => Unit@suspendable] = mutable.ListBuffer[(T) => Unit@suspendable]()
+  def addCallback(callback: (T) => Unit@suspendable): Unit = onTriggerCallbacks += callback
 
   doSampling()
 }
 
-trait Agent[T <: Transaction, B <: Bundle]{
-  val driver : Driver[T,B]
-  val sequencer : Sequencer[T]
+trait Agent[T <: Transaction, C <: Cycle[T], B <: Bundle] {
+  val driver : Driver[C, B]
+  val sequencer : Sequencer[C]
   val monitor : Monitor[T,B]
 
 //monitor
-  def addCallback(callback: (T)=> Unit): Unit = monitor.addCallback(callback)
+  def addCallback(callback: (T)=> Unit@suspendable): Unit@suspendable = monitor.addCallback(callback)
 //sequencer
-  def addBuilder(callback: => T) = sequencer.addBuilder(callback)
+  def addBuilder(callback: => C) = sequencer.addBuilder(callback)
   //def start() = sequencer.start()
   //def next() : Unit@suspendable = sequencer.next()
   def create(number: Int = 1) = sequencer.create(number)
@@ -79,3 +73,16 @@ trait Agent[T <: Transaction, B <: Bundle]{
   }
 }
 
+/////////////////////////
+class BasicPC[T]{
+  val callbacks = mutable.ListBuffer[(T) => Unit@suspendable]()
+  def send(packet: T): Unit@suspendable = {
+    callbacks.suspendable.foreach{_(packet)}
+  }
+  def receive(): T =
+  def connect(that: (T) => Unit@suspendable) = callbacks += that
+}
+
+class bidirectional[T]{
+
+}

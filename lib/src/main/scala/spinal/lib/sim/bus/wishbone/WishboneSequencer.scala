@@ -20,6 +20,8 @@ case class AddressRange(base : BigInt, size: Int){
 object WishboneTransaction{
   // implicit def singleToCycle(transaction : WishboneTransaction): WishboneCycle = new WishboneCycle(List(transaction))
   implicit def singleToList(transaction : WishboneTransaction): Seq[WishboneTransaction] = Seq(transaction)
+  implicit def singleToCycle(transaction : WishboneTransaction): WishboneCycle = WishboneCycle(transaction)
+
   //implicit def singleToCycle(transaction : WishboneTransaction): WishboneCycle = WishboneCycle(List(transaction))
   // implicit def singleToCycle(transaction : WishboneTransaction): WishboneCycle = List(transaction).asInstanceOf[WishboneCycle]
   //implicit def singleToCycle(transaction : WishboneTransaction): WishboneCycle = WishboneCycle(List(transaction))
@@ -62,10 +64,7 @@ case class WishboneTransaction( address : BigInt = 0,
   }
 
   def driveAsSlave(bus: Wishbone): Unit = {
-    bus.ADR       #= address
     bus.DAT_MISO  #= data
-    if(bus.config.useTGA) bus.TGA       #= tga
-    if(bus.config.useTGC) bus.TGC       #= tgc
     if(bus.config.useTGD) bus.TGD_MISO  #= tgd
   }
 
@@ -82,7 +81,7 @@ case class WishboneTransaction( address : BigInt = 0,
 //   implicit def listToCycle(list: Seq[WishboneTransaction]) : WishboneCycle = new WishboneCycle(list)
 //   implicit def cycleToList(cycle: WishboneCycle) : Seq[WishboneTransaction] = cycle.cycle
 // }
-case class WishboneCycle(val transactions: Seq[WishboneTransaction]) extends Transaction{
+case class WishboneCycle(val transactions: Seq[WishboneTransaction]) extends Cycle[WishboneTransaction]{
   //override def equals(that: Any) : Boolean = true
   override def toString: String = {
     List("address","data","we","tga","tgc","tgd").mkString("\t") + "\n" +
@@ -124,6 +123,16 @@ case class WishboneCycle(val transactions: Seq[WishboneTransaction]) extends Tra
 
 //   def isEmpty: Boolean = transactions.isEmpty
 // }
+
+
+// object WishboneSequencer{
+//   def apply(callback: (WishboneCycle) => Unit@suspendable): WishboneSequencer ={
+//     val sequencer = new WishboneSequencer()
+//     sequencer.addCallback(callback)
+//     sequencer
+//   }
+// }
+
 object WishboneSequencer{
   def apply(callback: (WishboneCycle) => Unit@suspendable): WishboneSequencer ={
     val sequencer = new WishboneSequencer()
@@ -131,4 +140,5 @@ object WishboneSequencer{
     sequencer
   }
 }
+
 class WishboneSequencer extends Sequencer[WishboneCycle]

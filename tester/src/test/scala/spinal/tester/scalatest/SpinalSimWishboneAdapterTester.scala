@@ -39,8 +39,8 @@ class SpinalSimWishboneAdapterTester extends FunSuite{
       dut.io.busOUT.ACK #= false
       dut.io.busOUT.DAT_MOSI #= 0
       dut.clockDomain.waitSampling(10)
-      SimTimeout(1000*20*100)
-      val sco = ScoreboardInOrder[WishboneCycle]()
+      SimTimeout(10*1000)
+      val sco = ScoreboardInOrder[WishboneTransaction]()
     //   val dri = new WishboneDriver(dut.io.busIN, dut.clockDomain)
     //   val dri2 = new WishboneDriver(dut.io.busOUT, dut.clockDomain)
 
@@ -73,25 +73,38 @@ class SpinalSimWishboneAdapterTester extends FunSuite{
     // }
     //val rand1 = () => WishboneTransaction(BigInt(Random.nextInt(200)),BigInt(Random.nextInt(200)))
 
-     val age1 = WishboneAgent(dut.io.busIN,dut.clockDomain){ transaction =>
+     val age1 = WishboneAgent(dut.io.busIN,dut.clockDomain,true){ transaction =>
         sco.pushRef(transaction)
      }
       age1.addBuilder{
         //WishboneCycle(List(WishboneTransaction().randomizeAddress(200).randomizeData(200)))
-        val provola = WishboneCycle(List(WishboneTransaction().randomizeAddress(200).randomizeData(200)))
-        println(provola)
-        provola
+        //val provola = WishboneCycle(List(WishboneTransaction().randomizeAddress(200).randomizeData(200)))
+        // val provola = WishboneTransaction().randomizeAddress(200).randomizeData(200)
+        // println(provola)
+        // provola
+        val transaction = for( x <- 0 to Random.nextInt(10)) yield WishboneTransaction().randomizeAddress(200).randomizeData(200)
+        WishboneCycle(transaction)
       }
-      val age2 = WishboneAgent(dut.io.busOUT,dut.clockDomain){ transaction =>
+      
+      val age2 = WishboneAgent(dut.io.busOUT,dut.clockDomain,false){ transaction =>
         sco.pushDut(transaction)
       }
+
       age2.addBuilder{
-        val provola = WishboneCycle(List(WishboneTransaction().randomizeAddress(200).randomizeData(200)))
-        println(provola)
-        provola
+        // val provola = WishboneTransaction().randomizeAddress(200).randomizeData(200)
+        // println(provola)
+        // provola
+                val transaction = for( x <- 0 to Random.nextInt(10)) yield WishboneTransaction().randomizeAddress(200).randomizeData(200)
+        WishboneCycle(transaction)
       }
+      // age2.create(10)
+      // age2.addCallback{
+      //   age2.sequencer.next()
+      // }
+
       age2.driver.slaveSink()
       age1.create(10)
+      age2.create(10)
       age1.sequencer.start()
 
       dut.clockDomain.waitSampling(10)

@@ -67,7 +67,7 @@ class SpinalSimWishboneDecoderTester extends FunSuite{
         val ddd = fork{
           while(!seq.isEmpty){
             val tran = seq.nextTransaction
-            dri.drive(tran ,true)
+            dri.drive(tran)
             dut.clockDomain.waitSampling(1)
           }
         }

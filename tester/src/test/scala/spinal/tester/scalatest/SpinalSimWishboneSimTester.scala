@@ -14,199 +14,77 @@ import scala.util.Random
 
 class wishbonesimplebus(config : WishboneConfig) extends Component{
   val io = new Bundle{
-    val busmaster = slave(Wishbone(config))
-    val busslave = master(Wishbone(config))
+    val busIN = slave(Wishbone(config))
+    val busOUT = master(Wishbone(config))
   }
   val ff = Reg(Bool)
-  io.busmaster <> io.busslave
+  io.busIN <> io.busOUT
 }
 class SpinalSimWishboneSimTester extends FunSuite{
-  val compiled = SimConfig.allOptimisation.withWave.compile(rtl = new wishbonesimplebus(WishboneConfig(8,8)))
-  val compPipe = SimConfig.allOptimisation.withWave.compile(rtl = new wishbonesimplebus(WishboneConfig(8,8).pipelined))
+  def simpleBus(conf: WishboneConfig,description : String = "") = {
+    val compiled = SimConfig.allOptimisation.withWave.compile(rtl = new wishbonesimplebus(conf))
+    compiled.doSim(description){ dut =>
+    dut.clockDomain.forkStimulus(period=10)
 
- test("DriveSingle"){
-   compiled.doSim("DriveSingle"){ dut =>
-     dut.clockDomain.forkStimulus(period=10)
-     dut.io.busmaster.CYC #= false
-     dut.io.busmaster.STB #= false
-     dut.io.busmaster.WE #= false
-     dut.io.busmaster.ADR #= 0
-     dut.io.busmaster.DAT_MOSI #= 0
-     dut.io.busslave.ACK #= false
-     dut.io.busslave.DAT_MOSI #= 0
-     dut.clockDomain.waitSampling(10)
-     SimTimeout(500 * 1000)
-     val sco = ScoreboardInOrder[WishboneTransaction]()
-     val dri = new WishboneDriver(dut.io.busmaster, dut.clockDomain)
-     val dri2 = new WishboneDriver(dut.io.busslave, dut.clockDomain)
+    val sco = ScoreboardInOrder[WishboneTransaction]()
 
-     val seq = WishboneSequencer{
-       WishboneTransaction(BigInt(Random.nextInt(200)),BigInt(Random.nextInt(200)))
+    val age1 = WishboneAgent(dut.io.busIN,dut.clockDomain,true){ transaction =>
+      sco.pushRef(transaction)
+      //sco.pushRef(WishboneTransaction(1,1))
+    }
+      age1.addBuilder{
+        // val transaction = for( x <- 0 to 10) yield WishboneTransaction().randomizeAddress(200).randomizeData(200)
+        val transaction = for( x <- 0 to 10) yield WishboneTransaction().randomizeAddress(200).randomizeData(200)
+        //val transaction = WishboneTransaction().randomizeAddress(200).randomizeData(200)
+        WishboneCycle(transaction)
       }
 
-     val mon1 = WishboneMonitor(dut.io.busmaster, dut.clockDomain){ bus =>
-       sco.pushRef(WishboneTransaction.sampleAsMaster(bus))
-     }
-
-     val mon2 = WishboneMonitor(dut.io.busslave, dut.clockDomain){ bus =>
-       sco.pushDut(WishboneTransaction.sampleAsMaster(bus))
-     }
-
-     dri2.slaveSink()
-
-     Suspendable.repeat(1000){
-       seq.generateTransactions(10)
-       val ddd = fork{
-         while(!seq.isEmpty){
-           val tran = seq.nextTransaction
-           dri.sendBlock(tran ,true)
-           dut.clockDomain.waitSampling(1)
-         }
-       }
-       ddd.join()
-       dut.clockDomain.waitSampling(10)
-     }
-   }
- }
-
- test("DriveCycle"){
-   compiled.doSim("DriveCycle"){ dut =>
-     dut.clockDomain.forkStimulus(period=10)
-     dut.io.busmaster.CYC #= false
-     dut.io.busmaster.STB #= false
-     dut.io.busmaster.WE #= false
-     dut.io.busmaster.ADR #= 0
-     dut.io.busmaster.DAT_MOSI #= 0
-     dut.io.busslave.ACK #= false
-     dut.io.busslave.DAT_MOSI #= 0
-     dut.clockDomain.waitSampling(10)
-     SimTimeout(10000 * 1000)
-      val sco = ScoreboardInOrder[WishboneTransaction]()
-      val dri = new WishboneDriver(dut.io.busmaster, dut.clockDomain)
-      val dri2 = new WishboneDriver(dut.io.busslave, dut.clockDomain)
-
-      val seq = WishboneSequencer{
-         for(i <- 0 to Random.nextInt(20))
-           yield WishboneTransaction(BigInt(Random.nextInt(200)),BigInt(Random.nextInt(200)))
+      val age2 = WishboneAgent(dut.io.busOUT,dut.clockDomain,false){ transaction =>
+        //sco.pushDut(transaction)
+        //sco.pushDut(WishboneTransaction(1,1))
       }
 
-     val mon1 = WishboneMonitor(dut.io.busmaster, dut.clockDomain){ bus =>
-       sco.pushRef(WishboneTransaction.sampleAsMaster(bus))
-     }
+      val mon = WishboneMonitor(dut.io.busOUT,dut.clockDomain,true){ transaction =>
+        sco.pushDut(transaction)
+      }
 
-     val mon2 = WishboneMonitor(dut.io.busslave, dut.clockDomain){ bus =>
-       sco.pushDut(WishboneTransaction.sampleAsMaster(bus))
-     }
+      age2.monitor.addCallback{ transaction =>
+        println("called")
+        age2.sequencer.next()
+      }
 
-     dri2.slaveSink()
+      age2.addBuilder{
+        //val transaction = for( x <- 0 to 1) yield WishboneTransaction().randomizeAddress(200).randomizeData(200)
+        //val transaction = WishboneTransaction().randomizeAddress(200).randomizeData(200)
+        //WishboneCycle(transaction)
+        val transaction = for( x <- 0 to 10) yield WishboneTransaction().randomizeAddress(200).randomizeData(200)
+        WishboneCycle(transaction)
+      }
 
-     Suspendable.repeat(1000){
-       seq.generateTransactions(10)
-       val ddd = fork{
-         while(!seq.isEmpty){
-           val tran = seq.nextTransaction
-           dri.sendBlock(tran ,true)
-           dut.clockDomain.waitSampling(1)
-         }
-       }
-       ddd.join()
-       dut.clockDomain.waitSampling(10)
-     }
-   }
- }
-
-  test("DriveSinglePipelined"){
-    compPipe.doSim("DriveSinglePipelined"){ dut =>
-      dut.clockDomain.forkStimulus(period=10)
-      dut.io.busmaster.CYC #= false
-      dut.io.busmaster.STB #= false
-      dut.io.busslave.STALL #= false
-      dut.io.busmaster.WE #= false
-      dut.io.busmaster.ADR #= 0
-      dut.io.busmaster.DAT_MOSI #= 0
-      dut.io.busslave.ACK #= false
-      dut.io.busslave.DAT_MOSI #= 0
+      age1.driver.clearBus()
+      age2.driver.clearBus()
       dut.clockDomain.waitSampling(10)
+      SimTimeout(100000)
 
-      SimTimeout(1000 * 1000)
-      val sco = ScoreboardInOrder[WishboneTransaction]()
-      val dri = new WishboneDriver(dut.io.busmaster, dut.clockDomain)
-      val dri2 = new WishboneDriver(dut.io.busslave, dut.clockDomain)
+      //age2.driver.slaveSink()
+      age1.create(10)
+      age2.create(100)
+      age1.sequencer.start()
 
-      val seq = WishboneSequencer{
-        WishboneTransaction(BigInt(Random.nextInt(200)),BigInt(Random.nextInt(200)))
-       }
-
-      val mon1 = WishboneMonitor(dut.io.busmaster, dut.clockDomain){ bus =>
-        sco.pushRef(WishboneTransaction.sampleAsMaster(bus))
-      }
-
-      val mon2 = WishboneMonitor(dut.io.busslave, dut.clockDomain){ bus =>
-        sco.pushDut(WishboneTransaction.sampleAsMaster(bus))
-      }
-
-      dri2.slaveSink()
-
-      Suspendable.repeat(1000){
-        seq.generateTransactions(10)
-        val ddd = fork{
-          while(!seq.isEmpty){
-            val tran = seq.nextTransaction
-            dri.sendPipelinedBlock(tran ,true)
-            dut.clockDomain.waitSampling(5)
-          }
-        }
-        ddd.join()
-        dut.clockDomain.waitSampling(10)
-      }
+      dut.clockDomain.waitSampling(10)
     }
   }
 
-  test("DriveCyclePipelined"){
-    compPipe.doSim("DriveCyclePipelined"){ dut =>
-      dut.clockDomain.forkStimulus(period=10)
-      dut.io.busmaster.CYC #= false
-      dut.io.busmaster.STB #= false
-      dut.io.busslave.STALL #= false
-      dut.io.busmaster.WE #= false
-      dut.io.busmaster.ADR #= 0
-      dut.io.busmaster.DAT_MOSI #= 0
-      dut.io.busslave.ACK #= false
-      dut.io.busslave.DAT_MOSI #= 0
-      dut.clockDomain.waitSampling(10)
-
-      SimTimeout(1000 * 1000000)
-      val sco = ScoreboardInOrder[WishboneTransaction]()
-      val dri = new WishboneDriver(dut.io.busmaster, dut.clockDomain)
-      val dri2 = new WishboneDriver(dut.io.busslave, dut.clockDomain)
-
-      val seq = WishboneSequencer{
-         for(i <- 0 to Random.nextInt(20))
-           yield WishboneTransaction(BigInt(Random.nextInt(200)),BigInt(Random.nextInt(200)))
-       }
-
-      val mon1 = WishboneMonitor(dut.io.busmaster, dut.clockDomain){ bus =>
-        sco.pushRef(WishboneTransaction.sampleAsMaster(bus))
-      }
-
-      val mon2 = WishboneMonitor(dut.io.busslave, dut.clockDomain){ bus =>
-        sco.pushDut(WishboneTransaction.sampleAsMaster(bus))
-      }
-
-      dri2.slaveSink()
-
-      Suspendable.repeat(1000){
-        seq.generateTransactions(10)
-        val ddd = fork{
-          while(!seq.isEmpty){
-            val tran = seq.nextTransaction
-            dri.sendPipelinedBlock(tran ,true)
-            dut.clockDomain.waitSampling(5)
-          }
-        }
-        ddd.join()
-        dut.clockDomain.waitSampling(10)
-      }
-    }
+  test("classic"){
+    val simple = WishboneConfig(8,8)
+    simpleBus(simple,"classic")
   }
+
+  test("pipelined"){
+    val simple = WishboneConfig(8,8).pipelined
+    simpleBus(simple,"pipelined")
+  }
+      //val compPipe = SimConfig.allOptimisation.withWave.compile(rtl = new wishbonesimplebus(WishboneConfig(8,8).pipelined))
 }
+
+
