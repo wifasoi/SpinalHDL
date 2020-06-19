@@ -129,7 +129,7 @@ beforeInstall () {
 
   # Debian package 9.7 contain bugs
   travis_start "iverilog" "iverilog" "build and install"
-  sudo apt install -y iverilog
+  sudo apt install -y gperf readline-common bison flex
   git clone https://github.com/steveicarus/iverilog --depth=1 --branch v10_3
   cd iverilog
   autoconf
