@@ -142,9 +142,13 @@ beforeInstall () {
 
   travis_start "cocotb" "cocotb" "install and compile VPI"
   sudo apt install -y git make gcc g++ swig python-dev
+  ln -s /usr/bin/python3 /usr/bin/python
+  ln -s /usr/bin/python3-config /usr/bin/python-config
+  ln -s /usr/bin/pydoc3 /usr/bin/pydoc
   git clone https://github.com/cocotb/cocotb.git
   cd cocotb
   git reset --hard "v1.3.1"
+  pyhton3 setup.py install
   cd ..
   # Force cocotb to compile VPI to avoid race condition when tests are start in parallel
   export PATH=$(pwd)/ghdl/usr/local/bin:$PATH
