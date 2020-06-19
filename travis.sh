@@ -142,9 +142,7 @@ beforeInstall () {
 
   travis_start "cocotb" "cocotb" "install and compile VPI"
   sudo apt install -y git make gcc g++ swig python-dev
-  ln -s /usr/bin/python3 /usr/bin/python
-  ln -s /usr/bin/python3-config /usr/bin/python-config
-  ln -s /usr/bin/pydoc3 /usr/bin/pydoc
+  sudo update-alternatives  --set python /usr/bin/python3.6
   git clone https://github.com/cocotb/cocotb.git
   cd cocotb
   git reset --hard "v1.3.1"
