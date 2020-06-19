@@ -141,7 +141,7 @@ beforeInstall () {
   travis_finish "iverilog"
 
   travis_start "cocotb" "cocotb" "install and compile VPI"
-  sudo apt install -y git make gcc g++ swig python-dev
+  sudo apt install -y git make gcc g++ swig python3 python3-setuptools python3-pip python3-dev
   sudo update-alternatives --install /usr/bin/python python /usr/bin/python3.6 2
   sudo update-alternatives  --set python /usr/bin/python3.6
   git clone https://github.com/cocotb/cocotb.git
