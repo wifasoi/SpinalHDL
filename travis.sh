@@ -118,9 +118,9 @@ beforeInstall () {
   travis_finish "fix"
 
   travis_start "ghdl" "GHDL" "build and install"
-  sudo apt install -y gnat-4.9 zlib1g-dev libboost-dev
+  sudo apt install -y gnat-9 zlib1g-dev libboost-dev
   git clone https://github.com/ghdl/ghdl ghdl-build && cd ghdl-build
-  git reset --hard "a4e7fd3e6286b24350d9c4a782cdba15cb081a9c"
+  git reset --hard "0316f95368837dc163173e7ca52f37ecd8d3591d"
   ./dist/ci-run.sh -bmcode build
   mv install-mcode ../ghdl
   cd ..
@@ -129,22 +129,22 @@ beforeInstall () {
 
   # Debian package 9.7 contain bugs
   travis_start "iverilog" "iverilog" "build and install"
-  sudo apt install -y gperf readline-common bison flex
-  curl -fsSL https://github.com/steveicarus/iverilog/archive/v10_2.tar.gz | tar -xvz
-  cd iverilog-10_2
+  sudo apt install -y iverilog
+  git clone https://github.com/steveicarus/iverilog --depth=1 --branch v10_3
+  cd iverilog
   autoconf
   ./configure
   make -j$(nproc)
   sudo make install
   cd ..
-  rm -rf iverilog-10_2
+  rm -rf iverilog
   travis_finish "iverilog"
 
   travis_start "cocotb" "cocotb" "install and compile VPI"
   sudo apt install -y git make gcc g++ swig python-dev
-  git clone https://github.com/potentialventures/cocotb
+  git clone https://github.com/cocotb/cocotb.git
   cd cocotb
-  git reset --hard "a463cee498346cb26fc215ced25c088039490665"
+  git reset --hard "v1.3.1"
   cd ..
   # Force cocotb to compile VPI to avoid race condition when tests are start in parallel
   export PATH=$(pwd)/ghdl/usr/local/bin:$PATH
