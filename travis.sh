@@ -147,7 +147,7 @@ beforeInstall () {
   git clone https://github.com/cocotb/cocotb.git
   cd cocotb
   git reset --hard "v1.3.1"
-  pyhton3 setup.py install
+  python3 setup.py install
   cd ..
   # Force cocotb to compile VPI to avoid race condition when tests are start in parallel
   export PATH=$(pwd)/ghdl/usr/local/bin:$PATH
