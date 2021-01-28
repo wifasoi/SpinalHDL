@@ -107,7 +107,7 @@ case class IcePack(_asc: Option[Path] = None,
   override def target = super.target ++ List(if(_unpack) _asc.getOrElse(Paths.get("icepack.asc")) else _bin.getOrElse(Paths.get("icepack.bin")))
 
   /** @inheritdoc */
-  override def makeComand: String =
+  override def makeCommand: String =
     if(_unpack) this.bin(getPrerequisiteFromExtension("bin")).toString
     else        this.asc(getPrerequisiteFromExtension("asc")).toString
 }
@@ -200,7 +200,7 @@ case class IceProg(_bin: Option[Path] = None,
   override def target = super.target
 
   /** @inheritdoc */
-  override def makeComand: String =
+  override def makeCommand: String =
     this.bin(getPrerequisiteFromExtension("bin")).toString
 }
 
@@ -294,7 +294,7 @@ case class IceBram(_hexFrom: Option[Path] = None,
   override def target = super.target ++ List(_ascOut.getOrElse(Paths.get("icebram.asc")))
 
   /** @inheritdoc */
-  override def makeComand: String =
+  override def makeCommand: String =
     if(_random) this.hexFrom(getPrerequisiteFromExtension("from.hex")).toString
     else this.ascIn(getPrerequisiteFromExtension("asc"))
              .hexFrom(getPrerequisiteFromExtension("from.hex"))

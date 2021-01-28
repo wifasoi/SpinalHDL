@@ -165,5 +165,5 @@ case class FormalCommand(_smt2: Option[Path]=None,
   override def needs = List("smt2")
 
   /** @inheritdoc */
-  override def makeComand: String = this.smt2(getPrerequisiteFromExtension("smt2")).toString
+  override def makeCommand: String = this.smt2(getPrerequisiteFromExtension("smt2")).toString
 }

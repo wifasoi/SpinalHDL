@@ -212,6 +212,6 @@ case class NextPNR_ice40(
   override def needs = List("json", "pcf")
 
   /** @inheritdoc */
-  override def makeComand: String =
+  override def makeCommand: String =
     this.withPCF(getPrerequisiteFromExtension("pcf")).json(getPrerequisiteFromExtension("json")).toString
 }

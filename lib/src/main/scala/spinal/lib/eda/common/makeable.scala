@@ -21,9 +21,9 @@ object Makeable {
     /** Make each element of the given Seq prerequisite of the next job
       *
       * @param pre the job that depends on
-      * @return pre wit this added in his dependecy list
+      * @return pre wit this added in his dependency list
       *
-      * @example{{{ List(JOB1,JOB2,JOB3) |> JOB3 }}}
+      * @example {{{ List(JOB1,JOB2,JOB3) |> JOB3 }}}
       */
     def |>(pre: MakeableProgram): Makeable = {
       list.foreach(_ |> pre)
@@ -39,19 +39,18 @@ trait Makeable {
   /** A list of what the command generate */
   def target: Seq[Path] = Seq[Path]()
 
-
   /** Create a string with all generated target file */
   def getTargetString: String = getTarget.mkString(" ")
 
 
   /** Get the target by his extension
     *
-    * @param str the extention of the target
+    * @param str the extension of the target
     * @return the path of the target with the given extension
     *
-    * @example{{{
-    * val job1: Makeable = JOB
-    * val targtxt = job1.getTargetFromExtension("txt")
+    * @example {{{
+    *   val job1: Makeable = JOB
+    *   val targtxt = job1.getTargetFromExtension("txt")
     * }}}
     */
   def getTargetFromExtension(str: String): Path = {
@@ -62,14 +61,14 @@ trait Makeable {
     ret.get
   }
 
-  /** Get the target by his extension
+  /** Get the target by his name
     *
-    * @param str the extention of the target
+    * @param str the name of the target
     * @return the path of the target with the given name
     *
-    * @example{{{
-    * val job1: Makeable = JOB
-    * val targtxt = job1.getTargetFromName("targ.txt")
+    * @example {{{
+    *   val job1: Makeable = JOB
+    *   val targtxt = job1.getTargetFromName("targ.txt")
     * }}}
     */
   def getTargetFromName(str: String): Path = {
@@ -81,12 +80,12 @@ trait Makeable {
 
   /** Get all targets by their extension
     *
-    * @param str the extention of the target
+    * @param str the extension of the target
     * @return the path of all targets with the given extension
     *
-    * @example{{{
-    * val job1: Makeable = JOB
-    * val targ = job1.getAllTargetsFromExtension("txt","png")
+    * @example {{{
+    *   val job1: Makeable = JOB
+    *   val targ = job1.getAllTargetsFromExtension("txt","png")
     * }}}
     */
   def getAllTargetsFromExtension(str: String*): Seq[Path] = {
@@ -96,24 +95,24 @@ trait Makeable {
 
 
 
-  /** Add this to the dependency of the given comand
+  /** Add this to the dependency of the given command
     *
-    * @param pre the comand where this is will be added as dependecy
-    * @return the given comand with this added in the dependecy list
+    * @param pre the command where this is will be added as dependency
+    * @return the given command with this added in the dependency list
     *
-    * @example{{{JOB1 |> JOB2}}}
+    * @example {{{JOB1 |> JOB2}}}
     */
   def |>(pre: MakeableProgram): pre.type = {
     pre.prerequisite += this
     pre
   }
 
-  /** Add this to the dependency of the given comand list
+  /** Add this to the dependency of the given command list
     *
-    * @param pre the comand list where this is will be added as dependecy
-    * @return the given comands with this added in the dependecy list
+    * @param pre the command list where this is will be added as dependency
+    * @return the given commands with this added in the dependency list
     *
-    * @example{{{JOB1 |> List(JOB2,JOB2)}}}
+    * @example {{{JOB1 |> List(JOB2,JOB2)}}}
     */
   def |>(pre: Seq[MakeableProgram]): Seq[Makeable] = pre.map(this |> _)
 
@@ -141,7 +140,7 @@ trait MakeableProgram extends Makeable{
   val _outputFolder: Path
   val prerequisite: mutable.MutableList[Makeable]
 
-  /** Add this comand to a phony target
+  /** Add this command to a phony target
     *
     * @param name the name of the phony target
     */
@@ -172,27 +171,27 @@ trait MakeableProgram extends Makeable{
   def needs: Seq[String] = Seq[String]()
 
 
-  /** The comand that is will be writte in the makefile, dafualt to this.toString */
-  def makeComand: String = this.toString
+  /** The command that is will be written in the makefile, default to this.toString */
+  def makeCommand: String = this.toString
 
   /** Add a prerequisite to the prerequisite list */
   def addPrerequisite(pre: Makeable*) = prerequisite ++= pre
 
-  /** Create a string with all the prerequisite by their extention */
+  /** Create a string with all the prerequisite by their extension */
   def getPrerequisiteString: String = getAllPrerequisiteFromExtension(needs: _*).mkString(" ")
 
 
   /** Create the command string */
-  def getCommandString: String = makeComand
+  def getCommandString: String = makeCommand
 
-  /** Get the prerequiste by his extension
+  /** Get the prerequisite by his extension
     *
-    * @param str the extention of the prerequisite
+    * @param str the extension of the prerequisite
     * @return the path of the prerequisite with the given extension
     *
-    * @example{{{
-    * val job1: Makeable = JOB
-    * val pretxt = job1.getPrerequisiteFromName("txt")
+    * @example {{{
+    *   val job1: Makeable = JOB
+    *   val pretxt = job1.getPrerequisiteFromName("txt")
     * }}}
     */
   def getPrerequisiteFromExtension(str: String): Path = {
@@ -202,15 +201,15 @@ trait MakeableProgram extends Makeable{
     ret.get
   }
 
-  /** Get the prerequiste by his extension
+  /** Get the prerequisite by his extension
     *
-    * @param str the extention of the prerequisite
+    * @param str the extension of the prerequisite
     * @return the path of the prerequisite with the given name
 
     *
-    * @example{{{
-    * val job1: Makeable = JOB
-    * val pretxt = job1.getPrerequisiteFromName("pre.txt")
+    * @example {{{
+    *   val job1: Makeable = JOB
+    *   val pretxt = job1.getPrerequisiteFromName("pre.txt")
     * }}}
     */
   def getPrerequisiteFromName(str: String): Path = {
@@ -223,12 +222,12 @@ trait MakeableProgram extends Makeable{
 
   /** Get all prerequisites by their extension
     *
-    * @param str the extention of the prerequisite
-    * @return the path of all prerequisite with the fiven extension
+    * @param str the extension of the prerequisite
+    * @return the path of all prerequisite with the given extension
     *
-    * @example{{{
-    * val job1: Makeable = JOB
-    * val targ = job1.getAllPrerequisiteFromExtension("txt","png")
+    * @example {{{
+    *   val job1: Makeable = JOB
+    *   val targ = job1.getAllPrerequisiteFromExtension("txt","png")
     * }}}
     */
   def getAllPrerequisiteFromExtension(str: String*): Seq[Path] = {
@@ -237,7 +236,7 @@ trait MakeableProgram extends Makeable{
     ret
   }
 
-  /** Create the makejob comand
+  /** Create the makejob command
     * @return the formatted string that describe this command as a makejob
     */
   def makejob: String = {
@@ -249,7 +248,7 @@ trait MakeableProgram extends Makeable{
     * @return a string wit all the makejob necessary to complete the task
     */
   def makefile: String = {
-    //generate recursivelly a list of job string, filter empty string generated from Makable without dependency (e.g. input Files)
+    //generate recursively a list of job string, filter empty string generated from Makeable without dependency (e.g. input Files)
     val preJob = prerequisite.collect{case job: MakeableProgram => job}.map(z => z.makefile)
     //add the job definition for this job, this is necessary for the recursion
     (preJob += makejob).mkString("", "\n\n", "")
@@ -260,7 +259,7 @@ trait MakeableProgram extends Makeable{
 trait PassFail extends MakeableProgram {
   val passFile: Option[Path]
 
-  /** Create a PASS file on comamnd succes
+  /** Create a PASS file on command success
     *
     * @param file the path of the PASS file
     */
@@ -333,23 +332,23 @@ case class Makefile(
   /** Generate all the job definition
     * This function will return a string with all the UNIQUE job definition
     *
-    * @return a String that cimplement all the necessary makejob
+    * @return a String that implement all the necessary makejob
     *
-    * @example{{{ List(JOB1,JOB2,JOB3).makejob }}}
+    * @example {{{ List(JOB1,JOB2,JOB3).makejob }}}
     */
   def makejobs: String = {
     val nodes     = getJobNode
     val test = getInputFileNode.distinct
-    val jobStrigs = nodes.map(_.makejob).distinct
-    jobStrigs.mkString("\n\n")
+    val jobStrings = nodes.map(_.makejob).distinct
+    jobStrings.mkString("\n\n")
   }
 
   /** Make each element of the given Seq prerequisite of the next job
     *
     * @param pre the job that depends on
-    * @return pre wit this added in his dependecy list
+    * @return pre wit this added in his dependency list
     *
-    * @example{{{ List(JOB1,JOB2,JOB3) |> JOB3 }}}
+    * @example {{{ List(JOB1,JOB2,JOB3) |> JOB3 }}}
     */
   // def |>(pre: Makeable): Makeable = {
   //   commands.foreach(_ |> pre)
@@ -360,7 +359,7 @@ case class Makefile(
     * @param target the target name, default to "test"
     * @return a String that collect all the test target in a phony one
     *
-    * @example{{{ List(JOB1,JOB2,JOB3).bundleTest("test1") }}}
+    * @example {{{ List(JOB1,JOB2,JOB3).bundleTest("test1") }}}
     */
   def bundleTest(target: String = "test"): String = {
     val nodes = getNodes.collect { case o: PassFail => o }
@@ -368,13 +367,13 @@ case class Makefile(
     ret.mkString(s""".PHONY: ${target}\n${target} : """, " ", "")
   }
 
-  /** Collect all filtered target into a given phonhy target
+  /** Collect all filtered target into a given phony target
     *
     * @param target the target name
     * @param filter the partial function that implement the filter
     * @return a String that collect all the filtered target in a phony one
     *
-    * @example{{{
+    * @example {{{
     * List(JOB1,JOB2,JOB3).bundle("test1"){
     *   case o: JOB1 => o
     * }
@@ -393,7 +392,7 @@ case class Makefile(
     * @param target the target name, default to "all"
     * @return a String that collect all the target in a phony one
     *
-    * @example{{{ List(JOB1,JOB2,JOB3).all() }}}
+    * @example {{{ List(JOB1,JOB2,JOB3).all() }}}
     */
   def all(target: String = "all") =
     bundle(target) { case x: MakeableProgram => x }
@@ -404,7 +403,7 @@ case class Makefile(
     * @param target the target name, default to "clean"
     * @return a String that implement a clean target
     *
-    * @example{{{ List(JOB1,JOB2,JOB3).clean() }}}
+    * @example {{{ List(JOB1,JOB2,JOB3).clean() }}}
     */
   def clean(target: String = "clean") = {
     val nodes            = getNodes
@@ -422,7 +421,7 @@ case class Makefile(
     *
     * @return a String that implement the necessary folder structure for the job
     *
-    * @example{{{ List(JOB1,JOB2,JOB3).mkdir }}}
+    * @example {{{ List(JOB1,JOB2,JOB3).mkdir }}}
     */
   def mkdir: String = {
     val nodes   = getNodes
@@ -441,7 +440,7 @@ case class Makefile(
     *
     * @return a string with all the necessary make task
     *
-    * @example{{{ List(JOB1,JOB2,JOB3).makefile }}}
+    * @example {{{ List(JOB1,JOB2,JOB3).makefile }}}
     */
   def makefile: String =
     List(
@@ -497,7 +496,7 @@ case class Makefile(
   def workDir(path: Path): Makefile = this.copy(workDirPath = path)
 
   /** @inheritdoc */
-  override def runComand = {
+  override def runCommand = {
     val x = f"mkdir -p ${workDirPath}" !! ;
     writeMakefile(workDirPath.resolve("Makefile").normalize)
     f"make -C ${workDirPath}"
