@@ -474,7 +474,7 @@ case class Makefile(
       val relativeFiles= files.map(workDirPath.relativize(Paths.get(".")).resolve(_).normalize)
       val targetPaths = files.map(destDir.resolve(_).normalize)
       val prerequisite = files.map(relativePath.resolve(_).normalize)
-      targetPaths.mkString(""," "," : ") + prerequisite.mkString("", " ", "\n\t") + s"cp -t ${destDir} " + relativeFiles.mkString(" ")
+      targetPaths.mkString(""," "," : ") + prerequisite.mkString("", " ", "\n\t") + s"mkdir -p ${destDir}\n\tcp " + relativeFiles.mkString(" ") + s" ${destDir}"
     }
     def poormanMultiMap(listmap: mutable.Map[Path,Seq[Path]], key: Path, values: Seq[Path]) = listmap += (key -> (values ++ (listmap get key getOrElse Nil)))
     val inputFileNodes = getInputFileNode
