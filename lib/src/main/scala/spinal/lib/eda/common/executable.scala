@@ -12,8 +12,8 @@ trait Executable{
 
   val isWindows = System.getProperty("os.name").toLowerCase().contains("win")
 
-  /** The command that will be run, default to this.toString */
-  def runCommand: String = this.toString
+  /** The command that will be run */
+  def runCommand: String
 
   /**
    * Run with optional extra arguments
