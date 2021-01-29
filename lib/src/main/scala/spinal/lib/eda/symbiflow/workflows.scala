@@ -10,7 +10,7 @@ object SymbiFlow {
   def syntesize[T <: Component]( report: SpinalReport[T],
                                 pcf: Path,
                                 target: String = "ice40") = {
-    val syntesis = InputFile(report) |>
+    val synthesis = InputFile(report) |>
       (
         YosysSnippet.loadSystemVerilog(report) +
         YosysSnippet.synthesize(target) +
@@ -18,7 +18,7 @@ object SymbiFlow {
       ).outputFolder(Paths.get("synthesis"))
     val constrain = InputFile(pcf)
 
-    List(syntesis, constrain) |> NextPNR_ice40().outputFolder(Paths.get("pnr"))
+    List(synthesis, constrain) |> NextPNR_ice40().outputFolder(Paths.get("pnr"))
   }
 
   def svFormal[T <: Component]( report: SpinalReport[T],

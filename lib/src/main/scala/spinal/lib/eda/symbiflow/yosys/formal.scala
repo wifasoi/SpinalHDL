@@ -135,7 +135,7 @@ case class FormalCommand(_smt2: Option[Path]=None,
   /** @inheritdoc */
   def pass(file: Path = Paths.get("PASS")): FormalCommand = this.copy(passFile=Some(file))
 
-  override def toString(): String = {
+  def runCommand(): String = {
     val ret = new StringBuilder(s"${_binaryPath} ")
     ret.append(s"-s ${_solver} ")
     ret.append("--presat --unroll --noprogress ")
@@ -165,5 +165,5 @@ case class FormalCommand(_smt2: Option[Path]=None,
   override def needs = List("smt2")
 
   /** @inheritdoc */
-  override def makeComand: String = this.smt2(getPrerequisiteFromExtension("smt2")).toString
+  override def makeCommand: String = this.smt2(getPrerequisiteFromExtension("smt2")).runCommand()
 }

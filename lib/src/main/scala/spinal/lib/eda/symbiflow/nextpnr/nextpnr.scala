@@ -32,7 +32,7 @@ trait NextPNR extends PassFail {
   val _no_tmdriv: Boolean
   val _binaryPath: Path
 
-  override def toString(): String = {
+  def runCommand(): String = {
     val ret = new StringBuilder(s"${_binaryPath } ")
     ret.append(s"--json ${_json.get} ")                                        // --json arg               JSON design file to ingest
     if (_freq.toDouble > 0) ret.append(s"--freq ${_freq.toDouble / 1000000} ") // --freq arg               set target frequency for design in MHz
@@ -163,16 +163,16 @@ case class NextPNR_ice40(
   /** Specify the path of the pcf file
     *
     * @param path the path of the pcf file
-    * @param allowUncostrained a flag to allow all uncostrained I/O
+    * @param allowUnconstrained a flag to allow all unconstrained I/O
     */
-  def withPCF(path: Path, allowUncostrained: Boolean = false) =
-    this.copy(_pcf = Some(path), _pcf_allow_unconstrained = allowUncostrained)
+  def withPCF(path: Path, allowUnconstrained: Boolean = false) =
+    this.copy(_pcf = Some(path), _pcf_allow_unconstrained = allowUnconstrained)
 
 
-  /** Allow uncostrained signals in the pcf file */
-  def allowUncostrained = this.copy(_pcf_allow_unconstrained = true)
+  /** Allow unconstrained signals in the pcf file */
+  def allowUnconstrained = this.copy(_pcf_allow_unconstrained = true)
 
-  override def toString(): String = {
+  override def runCommand(): String = {
     val ret = new StringBuilder(super.toString())
     ret.append(s"--pcf ${_pcf.get} ") // --pcf arg                  PCF constraints file to ingest
     ret.append(s"--${_target} ")
@@ -212,6 +212,6 @@ case class NextPNR_ice40(
   override def needs = List("json", "pcf")
 
   /** @inheritdoc */
-  override def makeComand: String =
-    this.withPCF(getPrerequisiteFromExtension("pcf")).json(getPrerequisiteFromExtension("json")).toString
+  override def makeCommand: String =
+    this.withPCF(getPrerequisiteFromExtension("pcf")).json(getPrerequisiteFromExtension("json")).runCommand()
 }

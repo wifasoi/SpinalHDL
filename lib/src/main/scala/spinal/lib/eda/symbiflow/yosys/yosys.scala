@@ -10,7 +10,9 @@ import spinal.core._
 
 import org.apache.commons.io.FilenameUtils
 
-trait YosysScript
+trait YosysScript {
+  def yosysCommand(): String
+}
 
 /** Class that represents a yosys command
   *
@@ -18,10 +20,10 @@ trait YosysScript
   * @param opt      the parameters for the yosys command
   */
 case class Command(command: String, opt: String*) extends YosysScript {
-  override def toString(): String = (command +: opt).mkString(" ")
+  override def yosysCommand(): String = (command +: opt).mkString(" ")
 }
 
-/** Class that rappresent a yosys frontend command
+/** Class that represent a yosys frontend command
   *
   * @param file the file name or path
   * @param frontend the frontend to use to interpreting the input file
@@ -30,11 +32,11 @@ case class Command(command: String, opt: String*) extends YosysScript {
 case class Input(file: Path, frontend: String, opt: String*)
     extends YosysScript {
 
-  override def toString(): String =
+  override def yosysCommand(): String =
     s"""read_${frontend} ${opt.mkString(" ")} ${file.normalize.toString}"""
 }
 
-/** Class that rappresent a yosys backend command
+/** Class that represent a yosys backend command
   *
   * @param file the file name or path
   * @param backend the backend to use when writing the output file
@@ -42,10 +44,10 @@ case class Input(file: Path, frontend: String, opt: String*)
   */
 case class Output(file: Path, backend: String, opt: String*)
     extends YosysScript {
-  override def toString(): String =
+  override def yosysCommand(): String =
     s"""write_${backend} ${opt.mkString(" ")} ${file.normalize.toString}"""
 
-    def outputFolder(path: Path): Output = Output(file=path.resolve(file),backend,opt:_*)
+  def outputFolder(path: Path): Output = Output(file=path.resolve(file),backend,opt:_*)
 }
 
 /** A class used to define a yosys script
@@ -57,7 +59,7 @@ case class Output(file: Path, backend: String, opt: String*)
   *
   * val json = Yosys().addOutputFile("design.json","json")
   *
-  * // you can combine yosys script togheder
+  * // you can combine yosys script together
   * val graph = input + show
   *
   * // you can change the output directory
@@ -158,13 +160,13 @@ case class Yosys( passFile: Option[Path] = None,
   def addOutputFile(file: String, backend: String, opt: String*): Unit =
     commands += Output(Paths.get(file), backend, opt: _*)
 
-  /** append a yosys command to this yosys istance, return this istance
+  /** append a yosys command to this yosys instance, return this instance
     *
     * @param yosys the yosys command to append
     */
   def append(yosys: Yosys*): Unit = commands ++= yosys.flatMap(_.commands)
 
-  /** append a yosys command to this yosys istance, return this istance
+  /** append a yosys command to this yosys instance, return this instance
     *
     * @param yosys the yosys command to append
     */
@@ -190,18 +192,18 @@ case class Yosys( passFile: Option[Path] = None,
 
   /** @inheritdoc */
   def binaryPath(path: Path) = this.copy(_binaryPath=path)
-  //override def toString(): String = commands.mkString("yosys -p'", "; ", "'")
-  override def toString(): String = {
+
+  override def makeCommand(): String = {
     val ret = scala.collection.mutable.ListBuffer[String]()
     commands foreach {
-    case i: Input => ret += Input(_copyPath.resolve(i.file),i.frontend, i.opt :_*).toString //@TODO: resolve harcode sorce
-    case o: Output => ret += Output(_outputFolder.resolve(o.file),o.backend, o.opt :_*).toString
-    case a => ret += a.toString
+      case i: Input => ret += Input(_copyPath.resolve(i.file),i.frontend, i.opt :_*).yosysCommand() //@TODO: resolve hardcode source()
+      case o: Output => ret += Output(_outputFolder.resolve(o.file),o.backend, o.opt :_*).yosysCommand()
+      case a => ret += a.yosysCommand()
     }
     ret.mkString("yosys -p'", "; ", "'")
   }
 
-  //needed for Makable
+  //needed for Makeable
   /** @inheritdoc */
   override def target = super.target ++ commands.collect { case o: Output => o }.map(_.file)
 
