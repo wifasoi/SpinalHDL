@@ -127,17 +127,15 @@ trait Makeable {
 }
 
 trait MakeableFile extends Makeable {
-  val file: Seq[Path]
-  override def target = file
-  override def getTarget = file.map( file => _copyPath.resolve(file).normalize())
+  /** Copy target directory under workspace */
   val _copyPath: Path
+
+  /** @inheritdoc */
+  override def getTarget: Seq[Path] = target.map(file => _copyPath.resolve(file.getFileName).normalize())
+
+  /** Override copy target directory */
   def copySourceTo(path: Path): MakeableFile
 
-
-  // override def getTarget: Seq[Path] = {
-  //   def relativize(source: Path) = if(source.isAbsolute) source else copySourcePath.normalize.toAbsolutePath.relativize(source.normalize.toAbsolutePath)
-  //   target.map(relativize(_))
-  // }
 }
 
 trait MakeableProgram extends Makeable {
@@ -319,6 +317,8 @@ case class InputFile(
     _copyPath: Path = Paths.get("source"),
     prerequisite: mutable.MutableList[Makeable] = mutable.MutableList[Makeable]()
 ) extends MakeableFile {
+  override def target: Seq[Path] = super.target ++ file
+
   def copySourceTo(path: Path): InputFile = this.copy(_copyPath=path)
 
 }
@@ -342,7 +342,7 @@ case class Makefile(
 
   def getJobNode : Seq[MakeableProgram] = getNodes.collect{case jobnode: MakeableProgram => jobnode}.toSeq
 
-  def getInputFileNode : Seq[MakeableFile] = getJobNode.flatMap(_.prerequisite).collect{case input: MakeableFile => input}.distinct
+  def getInputFileNode : Seq[InputFile] = getJobNode.flatMap(_.prerequisite).collect{case input: InputFile => input}.distinct
 
   /** Generate all the job definition
     * This function will return a string with all the UNIQUE job definition
