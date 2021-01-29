@@ -15,6 +15,11 @@ trait Executable{
   /** The command that will be run, default to this.toString */
   def runCommand: String = this.toString
 
+  /**
+   * Run with optional extra arguments
+   * @param opt optional extra arguments
+   * @return exit code
+   */
   def run(opt:String*): Int = {
     //val dir = if(logFile.nonEmpty) Option(logFile.get.getParent) else None
     if(dir.nonEmpty) dir.get.toFile.mkdir

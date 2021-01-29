@@ -35,13 +35,21 @@ object Makeable {
 trait Makeable {
   val prerequisite: mutable.MutableList[Makeable]
 
-
-  /** A list of what the command generate */
+  /**
+   * A list of what the command generate
+   * You should override this when necessary
+   *
+   * @example {{{
+   *   override def target: Seq[Path] = super.target +: someFile
+   * }}}
+   */
   def target: Seq[Path] = Seq[Path]()
+
+  /** A list of what the command generate for use in Makefile, only override it in traits(MakeableFile and MakeableProgram) */
+  def getTarget : Seq[Path] = target
 
   /** Create a string with all generated target file */
   def getTargetString: String = getTarget.mkString(" ")
-
 
   /** Get the target by his extension
     *
@@ -116,8 +124,6 @@ trait Makeable {
     */
   def |>(pre: Seq[MakeableProgram]): Seq[Makeable] = pre.map(this |> _)
 
-
-  def getTarget: Seq[Path] = target
 }
 
 trait MakeableFile extends Makeable {
@@ -134,10 +140,17 @@ trait MakeableFile extends Makeable {
   // }
 }
 
-trait MakeableProgram extends Makeable{
+trait MakeableProgram extends Makeable {
+  /** Phony target */
   val phony: Option[String]
+
+  /** The path to executable binary */
   val _binaryPath: Path
+
+  /** The path to output files under workspace */
   val _outputFolder: Path
+
+  /** Prerequisites */
   val prerequisite: mutable.MutableList[Makeable]
 
   /** Add this command to a phony target
@@ -167,12 +180,11 @@ trait MakeableProgram extends Makeable{
     */
   def outputFolder(path: Path): Makeable
 
-  /** A list of what the command need to function */
+  /** A list of what the command needs to function */
   def needs: Seq[String] = Seq[String]()
 
-
-  /** The command that is will be written in the makefile, default to this.toString */
-  def makeCommand: String = this.toString
+  /** The command that will be written in the makefile */
+  def makeCommand: String
 
   /** Add a prerequisite to the prerequisite list */
   def addPrerequisite(pre: Makeable*) = prerequisite ++= pre
@@ -180,8 +192,7 @@ trait MakeableProgram extends Makeable{
   /** Create a string with all the prerequisite by their extension */
   def getPrerequisiteString: String = getAllPrerequisiteFromExtension(needs: _*).mkString(" ")
 
-
-  /** Create the command string */
+  /** Create the command string, only override in mixin traits(MakeableLog and PassFail) */
   def getCommandString: String = makeCommand
 
   /** Get the prerequisite by his extension
@@ -245,7 +256,7 @@ trait MakeableProgram extends Makeable{
   }
 
   /** recursive function to generate the makefile
-    * @return a string wit all the makejob necessary to complete the task
+    * @return a string with all the makejob necessary to complete the task
     */
   def makefile: String = {
     //generate recursively a list of job string, filter empty string generated from Makeable without dependency (e.g. input Files)
@@ -254,14 +265,17 @@ trait MakeableProgram extends Makeable{
     (preJob += makejob).mkString("", "\n\n", "")
   }
 
-  override def getTarget: Seq[Path] = target.map(_outputFolder.resolve(_))
+  /** Join output folder to all target files */
+  override def getTarget: Seq[Path] = target.map(_outputFolder.resolve)
 }
+
+/** Mixin trait to create a PASS file on command success */
 trait PassFail extends MakeableProgram {
   val passFile: Option[Path]
 
   /** Create a PASS file on command success
     *
-    * @param file the path of the PASS file
+    * @param name the path of the PASS file
     */
   def pass(name: Path): PassFail
 
@@ -275,6 +289,7 @@ trait PassFail extends MakeableProgram {
     super.getCommandString + (if (passFile.nonEmpty) " && date > " + passFile.get else "")
 }
 
+/** Mixin trait to direct output to a log file */
 trait MakeableLog extends MakeableProgram {
   val logFile: Option[Path]
 
