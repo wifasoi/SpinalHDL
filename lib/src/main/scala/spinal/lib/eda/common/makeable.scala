@@ -65,7 +65,7 @@ trait Makeable {
     val ret = getTarget.find(x => FilenameUtils.isExtension(x.toString, str))
     assert(!ret.isEmpty, s"""Target with extension "${str}" not found in ${this
       .getClass
-      .getSimpleName}:${target.mkString("[", ",", "]")}""")
+      .getSimpleName}:${getTarget.mkString("[", ",", "]")}""")
     ret.get
   }
 
@@ -81,7 +81,7 @@ trait Makeable {
     */
   def getTargetFromName(str: String): Path = {
     val ret = getTarget.find(_.endsWith(str))
-    assert(!ret.isEmpty, s"""Target with name "${str}" not found in ${this.getClass.getSimpleName}:${target
+    assert(!ret.isEmpty, s"""Target with name "${str}" not found in ${this.getClass.getSimpleName}:${getTarget
       .mkString("[", ",", "]")}""")
     ret.get
   }
@@ -157,7 +157,7 @@ trait MakeableProgram extends Makeable {
     */
   def phony(name: String): Makeable
 
-  def isPhony: Boolean = phony.nonEmpty || target.isEmpty
+  def isPhony: Boolean = phony.nonEmpty || getTarget.isEmpty
 
   /** Create the phony string */
   def getPhonyString: String = if (isPhony) f".PHONY: ${getPhonyTargetString}" else ""
@@ -222,7 +222,7 @@ trait MakeableProgram extends Makeable {
     * }}}
     */
   def getPrerequisiteFromName(str: String): Path = {
-    val pre = prerequisite.flatMap(_.target)
+    val pre = prerequisite.flatMap(_.getTarget)
     val ret = pre.find(_.endsWith(str))
     assert(!ret.isEmpty, s"""Prerequisite with name "${str}" not found in ${this.getClass.getSimpleName}:${pre.mkString("[", ",", "]")}""")
     ret.get
@@ -329,7 +329,7 @@ object Makefile{
 
 case class Makefile(
     commands: Seq[Makeable],
-    workDirPath: Path = Paths.get(".").normalize(),
+    workDirPath: Path = Paths.get("edaWorkspace").normalize(),
     logFile: Option[Path] = None,
     binaryPath: Path = Paths.get("make")
   ) extends Executable{
