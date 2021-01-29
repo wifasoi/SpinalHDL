@@ -7,11 +7,11 @@ import java.nio.file.{Path, Paths}
 
 // -v verbose (repeat to increase verbosity)
 
-/** Compose the command line for creating the FPGA bynary or vice-versa (icepack) */
+/** Compose the command line for creating the FPGA binary or vice-versa (icepack) */
 case class IcePack(_asc: Option[Path] = None,
                    _bin: Option[Path] = None,
                    _unpack: Boolean = false,
-                   _deepsleep: Boolean = false,
+                   _deepSleep: Boolean = false,
                    _writeCram: Boolean = false,
                    _writeCramFill: Boolean = false,
                    _writeCramCheckerboard: Boolean = false,
@@ -37,7 +37,7 @@ case class IcePack(_asc: Option[Path] = None,
   /** Specify the path of the asc file
     *
     * @param asc the path of the asc file
-    * @param allowUncostrained a flag to allow all uncostrained I/O
+    * @param allowUnconstrained a flag to allow all unconstrained I/O
     */
   def asc(asc: Path) = this.copy(_asc = Some(asc))
 
@@ -45,7 +45,7 @@ case class IcePack(_asc: Option[Path] = None,
   def unpack = this.copy(_unpack = true)
 
   /** Disable deep sleep after program */
-  def disableDeepSleep = this.copy(_deepsleep = false)
+  def disableDeepSleep = this.copy(_deepSleep = false)
 
   /** Write cram bitmap as netpbm file */
   def writeCram = this.copy(_writeCram = true)
@@ -73,10 +73,10 @@ case class IcePack(_asc: Option[Path] = None,
     ret
   }
 
-  override def toString(): String = {
+  def runCommand(): String = {
     val ret = new StringBuilder("icepack ")
     if (_unpack) ret.append("-u ") // -u unpack mode (implied when called as 'iceunpack')
-    if (_deepsleep) ret.append("-s ") // -s disable final deep-sleep SPI flash command after bitstream is loaded
+    if (_deepSleep) ret.append("-s ") // -s disable final deep-sleep SPI flash command after bitstream is loaded
     if (_writeCram) ret.append("-b ") // -b write cram bitmap as netpbm file
     if (_writeCramFill) ret.append("-f ") // -f write cram bitmap (fill tiles) as netpbm file
     if (_writeCramCheckerboard) ret.append("-c ") // -c  write cram bitmap (checkerboard) as netpbm file repeat to flip the selection of tiles
@@ -108,8 +108,8 @@ case class IcePack(_asc: Option[Path] = None,
 
   /** @inheritdoc */
   override def makeCommand: String =
-    if(_unpack) this.bin(getPrerequisiteFromExtension("bin")).toString
-    else        this.asc(getPrerequisiteFromExtension("asc")).toString
+    if(_unpack) this.bin(getPrerequisiteFromExtension("bin")).runCommand()
+    else        this.asc(getPrerequisiteFromExtension("asc")).runCommand()
 }
 
 /** Compose the command line for programming/reading the FPGA (iceprog)
@@ -171,7 +171,7 @@ case class IceProg(_bin: Option[Path] = None,
     this.copy(_bin=newBin)
   }
 
-  override def toString(): String = {
+  override def runCommand(): String = {
     val ret = new StringBuilder(s"${_binaryPath} ")
     ret.append(s"-d ${_device} ")
     ret.append(s"-o ${_offset} ")
@@ -201,10 +201,10 @@ case class IceProg(_bin: Option[Path] = None,
 
   /** @inheritdoc */
   override def makeCommand: String =
-    this.bin(getPrerequisiteFromExtension("bin")).toString
+    this.bin(getPrerequisiteFromExtension("bin")).runCommand()
 }
 
-/** Compose the command line for replacin the bram data (icebram)
+/** Compose the command line for replacing the bram data (icebram)
  * @todo finish this and check
  */
 case class IceBram(_hexFrom: Option[Path] = None,
@@ -224,7 +224,7 @@ case class IceBram(_hexFrom: Option[Path] = None,
   // /** @inheritdoc */
   // def workDir(path: Path) = this.copy(workDirPath = path)
 
-  /** Specify the path where the hex file use for syntesys reside
+  /** Specify the path where the hex file use for synthesis reside
     * and specify were save the random hex file
     *
     * @param hex the path of the hex file
@@ -268,7 +268,7 @@ case class IceBram(_hexFrom: Option[Path] = None,
   /** @inheritdoc */
   def outputFolder(path: Path): IceBram = this.copy(_outputFolder=path)
 
-  override def toString: String = {
+  def runCommand: String = {
     val ret = new StringBuilder(s"${_binaryPath} ")
     if (_random) ret.append(s"-g ")
     if (_random && _seed.nonEmpty) {
@@ -295,10 +295,10 @@ case class IceBram(_hexFrom: Option[Path] = None,
 
   /** @inheritdoc */
   override def makeCommand: String =
-    if(_random) this.hexFrom(getPrerequisiteFromExtension("from.hex")).toString
+    if(_random) this.hexFrom(getPrerequisiteFromExtension("from.hex")).runCommand
     else this.ascIn(getPrerequisiteFromExtension("asc"))
              .hexFrom(getPrerequisiteFromExtension("from.hex"))
-             .hexTo(getPrerequisiteFromExtension("hex")).toString
+             .hexTo(getPrerequisiteFromExtension("hex")).runCommand
 }
 
 // case class IceCompr(_ascIn: Option[Path] = None,
