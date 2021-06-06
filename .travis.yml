@@ -57,7 +57,7 @@ scala:
   - 2.11.12
 jdk: openjdk9
 install:
-  - sudo pip3 install cototb
+  - sudo pip3 install cocotb
 addons:
   apt:
     sources:
