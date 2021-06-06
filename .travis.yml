@@ -51,7 +51,6 @@
 
 language: scala
 
-
 dist: focal
 scala:
   - 2.11.12
@@ -75,3 +74,11 @@ addons:
 script:
   - sbt -jvm-opts travis/jvmopts.compile compile
   - sbt -jvm-opts travis/jvmopts.test test
+before_cache:
+  # Tricks to avoid unnecessary cache updates
+  - find $HOME/.ivy2 -name "ivydata-*.properties" -delete
+  - find $HOME/.sbt -name "*.lock" -delete
+cache:
+  directories:
+    - $HOME/.ivy2/cache
+    - $HOME/.sbt/boot/
