@@ -1,50 +1,77 @@
-dist: focal
+# dist: focal
 
-jobs:
-  include:
-    - os: linux
-      services: docker
-      language: minimal
-      install: skip
-      addons:
-        apt:
-          packages:
-          - pass
-      env: DOCKER=spinalhdl/dev
-      script: ./travis.sh -c
-      deploy:
-        provider: script
-        cleanup: false
-        script: ./travis.sh -d
-        on:
-          repo: SpinalHDL/SpinalHDL
-          branch: master
-#    - &host
-#      language: scala
-#      # See 'project/Version.scala'
-#      scala: 2.11.12
-#      jdk: openjdk9
-#      sbt_args: -Dsbt.supershell=false -no-colors -J-Xss2m
-#      script:
-#        - sbt -jvm-opts travis/jvmopts.compile compile
-#        - sbt -jvm-opts travis/jvmopts.test test
-#      before_install:
-#        - ./travis.sh -i
-#        - export PATH=$(pwd)/../ghdl/usr/local/bin:$PATH
-#        - export COCOTB=$(pwd)/../cocotb
-#      before_cache:
-#        # Tricks to avoid unnecessary cache updates
-#        - find $HOME/.ivy2 -name "ivydata-*.properties" -delete
-#        - find $HOME/.sbt -name "*.lock" -delete
-#      cache:
-#        directories:
-#          - $HOME/.ivy2/cache
-#          - $HOME/.sbt/boot/
-#    - <<: *host
-#      jdk: openjdk10
-#    - <<: *host
-#      jdk: openjdk11
-#    - <<: *host
-#      jdk: openjdk7
-#    - <<: *host
-#      jdk: oraclejdk7
+# jobs:
+#   include:
+#     - os: linux
+#       services: docker
+#       language: minimal
+#       install: skip
+#       addons:
+#         apt:
+#           packages:
+#           - pass
+#       env: DOCKER=spinalhdl/dev
+#       script: ./travis.sh -c
+#       deploy:
+#         provider: script
+#         cleanup: false
+#         script: ./travis.sh -d
+#         on:
+#           repo: SpinalHDL/SpinalHDL
+#           branch: master
+# #    - &host
+# #      language: scala
+# #      # See 'project/Version.scala'
+# #      scala: 2.11.12
+# #      jdk: openjdk9
+# #      sbt_args: -Dsbt.supershell=false -no-colors -J-Xss2m
+# #      script:
+# #        - sbt -jvm-opts travis/jvmopts.compile compile
+# #        - sbt -jvm-opts travis/jvmopts.test test
+# #      before_install:
+# #        - ./travis.sh -i
+# #        - export PATH=$(pwd)/../ghdl/usr/local/bin:$PATH
+# #        - export COCOTB=$(pwd)/../cocotb
+# #      before_cache:
+# #        # Tricks to avoid unnecessary cache updates
+# #        - find $HOME/.ivy2 -name "ivydata-*.properties" -delete
+# #        - find $HOME/.sbt -name "*.lock" -delete
+# #      cache:
+# #        directories:
+# #          - $HOME/.ivy2/cache
+# #          - $HOME/.sbt/boot/
+# #    - <<: *host
+# #      jdk: openjdk10
+# #    - <<: *host
+# #      jdk: openjdk11
+# #    - <<: *host
+# #      jdk: openjdk7
+# #    - <<: *host
+# #      jdk: oraclejdk7
+
+language: scala
+
+
+dist: focal
+scala:
+  - 2.11.12
+jdk: openjdk9
+install:
+  - sudo pip3 install cototb
+addons:
+  apt:
+    sources:
+      - sourceline: "deb https://repo.scala-sbt.org/scalasbt/debian all main"
+        key_url: "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x2EE0EA64E40A89B84B2DF73499E82A75642AC823"
+    packages:
+      - libboost-dev
+      - sbt
+      - ghdl
+      - iverilog
+      - verilator
+      - default-jdk
+      - python3
+      - python3-pip
+script:
+  - sbt -jvm-opts travis/jvmopts.compile compile
+  - sbt -jvm-opts travis/jvmopts.test test
