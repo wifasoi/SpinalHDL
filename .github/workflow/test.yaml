@@ -1,0 +1,24 @@
+name: test
+on: [push]
+jobs:
+  test-spinalhdl:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: install python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.x'
+      - name: install cocotb
+        run:  pip install cocotb
+      - name: install verilator
+        uses:  drom/action-verilator@v0.1.11
+      - name: install ghdl
+        uses: ghdl/setup-ghdl-ci@nightly
+        with: mcode
+      - name: install scala
+        uses: olafurpg/setup-scala@v12
+        with:
+          openjdk@1.16
+      - run: sbt compile
+      - run: sbt test
